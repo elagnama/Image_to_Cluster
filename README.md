@@ -90,3 +90,28 @@ Cet atelier, **noté sur 20 points**, est évalué sur la base du barème suivan
 - Processus travail (quantité de commits, cohérence globale, interventions externes, ...) (4 points) 
 
 
+Synthèse Technique du Projet
+Ce projet repose sur trois fichiers principaux qui automatisent la chaîne CI/CD locale.
+
+1. Makefile (L'Orchestrateur)
+C'est le point d'entrée unique du projet. Il automatise et séquence toutes les tâches pour garantir la reproductibilité.
+
+Rôle : Nettoie l'environnement (purge), installe les dépendances, lance le build Packer, crée le cluster K3d avec le mapping de port (8080:30080) et déclenche le déploiement Ansible.
+
+Commande clé : make all (Exécute tout le pipeline de A à Z).
+               make run (Execute la pipeline pour faire la mise à jour)
+               kubectl port-forward svc/nginx-service 8080:80 (Fais le port-forwarding après le lancement de la pipeline)  
+
+2. packer.pkr.hcl (L'Image Immuable)
+Ce fichier définit la construction de l'image Docker personnalisée (my-nginx-custom).
+
+Rôle : Part d'une image nginx:alpine, injecte le code source (index.html) et corrige la commande de démarrage (Entrypoint/CMD) pour éviter les erreurs de type CrashLoopBackOff dans Kubernetes.
+
+Avantage : Garantit que l'image est identique à chaque déploiement.
+
+3. deploy.yml (Le Déploiement Ansible)
+Ce playbook remplace les commandes manuelles kubectl. Il décrit l'état souhaité de l'infrastructure de manière déclarative.
+
+Rôle : Crée le Deployment (le Pod Nginx) et le Service associé.
+
+Configuration critique : Définit le NodePort: 30080 et imagePullPolicy: Never pour forcer l'usage de l'image locale importée dans K3d.
